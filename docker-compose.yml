@@ -1,0 +1,61 @@
+version: '3'
+services:
+
+  #nginx
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    #kopiowanie konfiguracji nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - 6660:80
+      - 6001:8080
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - backend
+      - frontend
+  php:
+    #budowanie z dockerfile z dodaniem extensiona mysqli
+    build: ./php
+    container_name: php
+    #kopiowanie kodu źródłowego
+    volumes:
+      - ./app:/var/www/public
+    #ustawienie zmiennych środowiskowych do połączenia
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DB}
+    depends_on:
+      - mysql
+    networks:
+      - backend
+  pma:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      - PMA_HOST=${MYSQL_HOST}
+    depends_on:
+      - mysql
+    networks:
+      - backend
+  mysql:
+    image: percona:8
+    container_name: ${MYSQL_HOST}
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+    #inicjalizacja bazy danych, stworzenie nowej bazy app
+    volumes:
+      - ./mysql:/docker-entrypoint-initdb.d
+    networks:
+      - backend
+networks:
+  backend:
+    external: false
+    internal: true
+  frontend:
+    external: true
